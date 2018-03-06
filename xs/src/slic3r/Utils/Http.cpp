@@ -46,6 +46,7 @@ struct Http::priv
 	~priv();
 
 	static size_t writecb(void *data, size_t size, size_t nmemb, void *userp);
+	std::string curl_error(CURLcode curlcode);
 	std::string body_size_error();
 	void http_perform();
 };
@@ -88,6 +89,14 @@ size_t Http::priv::writecb(void *data, size_t size, size_t nmemb, void *userp)
 	return realsize;
 }
 
+std::string Http::priv::curl_error(CURLcode curlcode)
+{
+	return (boost::format("%1% (%2%)")
+		% ::curl_easy_strerror(curlcode)
+		% curlcode
+	).str();
+}
+
 std::string Http::priv::body_size_error()
 {
 	return (boost::format("HTTP body data size exceeded limit (%1% bytes)") % limit).str();
@@ -121,7 +130,7 @@ void Http::priv::http_perform()
 		if (res == CURLE_WRITE_ERROR) {
 			error = std::move(body_size_error());
 		} else {
-			error = ::curl_easy_strerror(res);
+			error = std::move(curl_error(res));
 		};
 
 		if (errorfn) {
