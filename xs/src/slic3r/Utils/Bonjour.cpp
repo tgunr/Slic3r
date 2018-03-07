@@ -1,6 +1,5 @@
 #include "Bonjour.hpp"
 
-#include <iostream>  // XXX
 #include <cstdint>
 #include <algorithm>
 #include <unordered_map>
@@ -23,16 +22,18 @@ namespace asio = boost::asio;
 using boost::asio::ip::udp;
 
 
-// TODO: Fuzzing test (done without TXT)
-// FIXME: check char retype to unsigned
-
-
 namespace Slic3r {
 
 
 // Minimal implementation of a MDNS/DNS-SD client
 // This implementation is extremely simple, only the bits that are useful
-// for very basic MDNS discovery are present.
+// for basic MDNS discovery of OctoPi devices are present.
+// However, the bits that are present are implemented with security in mind.
+// Only fully correct DNS replies are allowed through.
+// While decoding the decoder will bail the moment it encounters anything fishy.
+// At least that's the idea. To help prove this is actually the case,
+// the implementations has been tested with AFL.
+
 
 struct DnsName: public std::string
 {
@@ -48,8 +49,7 @@ struct DnsName: public std::string
 			return boost::none;
 		}
 
-		// Check for recursion depth to prevent parsing names that are nested too deeply
-		// or end up cyclic:
+		// Check for recursion depth to prevent parsing names that are nested too deeply or end up cyclic:
 		if (depth >= MAX_RECURSION) {
 			return boost::none;
 		}
@@ -443,6 +443,30 @@ private:
 	}
 };
 
+std::ostream& operator<<(std::ostream &os, const DnsMessage &msg)
+{
+	os << "DnsMessage(ID: " << msg.header.id << ", "
+		<< "Q: " << (msg.question ? msg.question->name.c_str() : "none") << ", "
+		<< "A: " << (msg.rr_a ? msg.rr_a->ip.to_string() : "none") << ", "
+		<< "AAAA: " << (msg.rr_aaaa ? msg.rr_aaaa->ip.to_string() : "none") << ", "
+		<< "services: [";
+
+		enum { SRV_PRINT_MAX = 3 };
+		unsigned i = 0;
+		for (const auto &sdpair : msg.sdmap) {
+			os << sdpair.first << ", ";
+
+			if (++i >= SRV_PRINT_MAX) {
+				os << "...";
+				break;
+			}
+		}
+
+		os << "])";
+
+	return os;
+}
+
 
 struct BonjourRequest
 {
@@ -524,6 +548,7 @@ struct Bonjour::priv
 
 	priv(std::string service, std::string protocol);
 
+	std::string strip_service_dn(const std::string &service_name) const;
 	void udp_receive(udp::endpoint from, size_t bytes);
 	void lookup_perform();
 };
@@ -536,6 +561,20 @@ Bonjour::priv::priv(std::string service, std::string protocol) :
 	rq_id(0)
 {
 	buffer.resize(DnsMessage::MAX_SIZE);
+}
+
+std::string Bonjour::priv::strip_service_dn(const std::string &service_name) const
+{
+	if (service_name.size() <= service_dn.size()) {
+		return service_name;
+	}
+
+	auto needle = service_name.rfind(service_dn);
+	if (needle == service_name.size() - service_dn.size()) {
+		return service_name.substr(0, needle - 1);
+	} else {
+		return service_name;
+	}
 }
 
 void Bonjour::priv::udp_receive(udp::endpoint from, size_t bytes)
@@ -557,7 +596,8 @@ void Bonjour::priv::udp_receive(udp::endpoint from, size_t bytes)
 			}
 
 			const auto &srv = *sdpair.second.srv;
-			BonjourReply reply(ip, sdpair.first, srv.hostname);
+			auto service_name = strip_service_dn(sdpair.first);
+			BonjourReply reply(ip, srv.port, std::move(service_name), srv.hostname);
 
 			if (sdpair.second.txt) {
 				static const std::string tag_path = "path=";
@@ -595,11 +635,11 @@ void Bonjour::priv::lookup_perform()
 		udp::endpoint mcast(BonjourRequest::MCAST_IP4, BonjourRequest::MCAST_PORT);
 		socket.send_to(asio::buffer(brq->data), mcast);
 
-		bool timeout = false;
+		bool expired = false;
 		asio::deadline_timer timer(io_service);
-		timer.expires_from_now(boost::posix_time::seconds(10));
-		timer.async_wait([=, &timeout](const error_code &error) {
-			timeout = true;
+		timer.expires_from_now(boost::posix_time::seconds(timeout));
+		timer.async_wait([=, &expired](const error_code &error) {
+			expired = true;
 			if (self->completefn) {
 				self->completefn();
 			}
@@ -612,7 +652,7 @@ void Bonjour::priv::lookup_perform()
 		socket.async_receive_from(asio::buffer(buffer, buffer.size()), recv_from, recv_handler);
 
 		while (io_service.run_one()) {
-			if (timeout) {
+			if (expired) {
 				socket.cancel();
 			} else {
 				buffer.resize(DnsMessage::MAX_SIZE);
@@ -626,8 +666,9 @@ void Bonjour::priv::lookup_perform()
 
 // API - public part
 
-BonjourReply::BonjourReply(boost::asio::ip::address ip, std::string service_name, std::string hostname) :
+BonjourReply::BonjourReply(boost::asio::ip::address ip, uint16_t port, std::string service_name, std::string hostname) :
 	ip(std::move(ip)),
+	port(port),
 	service_name(std::move(service_name)),
 	hostname(std::move(hostname)),
 	path("/"),
@@ -677,27 +718,13 @@ Bonjour::Ptr Bonjour::lookup()
 	auto self = std::make_shared<Bonjour>(std::move(*this));
 
 	if (self->p) {
-		auto io_thread = std::thread([self](){
+		auto io_thread = std::thread([self]() {
 				self->p->lookup_perform();
 			});
 		self->p->io_thread = std::move(io_thread);
 	}
 
 	return self;
-}
-
-
-void Bonjour::pokus()   // XXX
-{
-	auto bonjour = Bonjour("octoprint")
-		.set_timeout(15)
-		.on_reply([](BonjourReply &&reply) {
-			std::cerr << "BonjourReply: " << reply << std::endl;
-		})
-		.on_complete([](){
-			std::cerr << "MDNS lookup complete" << std::endl;
-		})
-		.lookup();
 }
 
 

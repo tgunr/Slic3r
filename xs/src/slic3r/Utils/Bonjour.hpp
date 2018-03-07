@@ -1,26 +1,26 @@
 #ifndef slic3r_Bonjour_hpp_
 #define slic3r_Bonjour_hpp_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <functional>
-// #include <ostream>
 #include <boost/asio/ip/address.hpp>
 
 
 namespace Slic3r {
 
 
-// TODO: reply data structure
 struct BonjourReply
 {
 	boost::asio::ip::address ip;
+	uint16_t port;
 	std::string service_name;
 	std::string hostname;
 	std::string path;
 	std::string version;
 
-	BonjourReply(boost::asio::ip::address ip, std::string service_name, std::string hostname);
+	BonjourReply(boost::asio::ip::address ip, uint16_t port, std::string service_name, std::string hostname);
 };
 
 std::ostream& operator<<(std::ostream &, const BonjourReply &);
@@ -32,7 +32,7 @@ private:
 	struct priv;
 public:
 	typedef std::shared_ptr<Bonjour> Ptr;
-	typedef std::function<void(BonjourReply &&reply)> ReplyFn;
+	typedef std::function<void(BonjourReply &&)> ReplyFn;
 	typedef std::function<void()> CompleteFn;
 
 	Bonjour(std::string service, std::string protocol = "tcp");
@@ -44,8 +44,6 @@ public:
 	Bonjour& on_complete(CompleteFn fn);
 
 	Ptr lookup();
-
-	static void pokus();    // XXX: remove
 private:
 	std::unique_ptr<priv> p;
 };

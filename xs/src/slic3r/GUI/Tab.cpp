@@ -3,7 +3,8 @@
 #include "PresetBundle.hpp"
 #include "PresetHints.hpp"
 #include "../../libslic3r/Utils.hpp"
-#include "../Utils/OctoPrint.hpp"
+#include "slic3r/Utils/OctoPrint.hpp"
+#include "BonjourDialog.hpp"
 
 #include <wx/app.h>
 #include <wx/button.h>
@@ -1043,10 +1044,9 @@ void TabPrinter::build()
 		}
 
 		optgroup = page->new_optgroup(_(L("OctoPrint upload")));
-		// # append two buttons to the Host line
-		auto octoprint_host_browse = [this] (wxWindow* parent) {
+
+		auto octoprint_host_browse = [this, optgroup] (wxWindow* parent) {
 			auto btn = new wxButton(parent, wxID_ANY, _(L(" Browse "))+"\u2026", wxDefaultPosition, wxDefaultSize, wxBU_LEFT);
-//			btn->SetFont($Slic3r::GUI::small_font);
 			btn->SetBitmap(wxBitmap(from_u8(Slic3r::var("zoom.png")), wxBITMAP_TYPE_PNG));
 			auto sizer = new wxBoxSizer(wxHORIZONTAL);
 			sizer->Add(btn);
@@ -1054,28 +1054,11 @@ void TabPrinter::build()
 			if (m_is_disabled_button_browse) 
 				btn->Disable();
 
-			btn->Bind(wxEVT_BUTTON, [this, parent](wxCommandEvent e){
-				if (m_event_button_browse > 0){
-					wxCommandEvent event(m_event_button_browse);
-					event.SetString("Button BROWSE was clicked!");
-					g_wxMainFrame->ProcessWindowEvent(event);
+			btn->Bind(wxEVT_BUTTON, [this, parent, optgroup](wxCommandEvent e) {
+				BonjourDialog dialog(parent);
+				if (dialog.show_and_lookup()) {
+					optgroup->set_value("octoprint_host", std::move(dialog.get_selected()), true);
 				}
-// 				// # look for devices
-// 				auto entries;
-// 				{
-// 					my $res = Net::Bonjour->new('http');
-// 					$res->discover;
-// 					$entries = [$res->entries];
-// 				}
-// 				if (@{$entries}) {
-// 					my $dlg = Slic3r::GUI::BonjourBrowser->new($self, $entries);
-// 					$self->_load_key_value('octoprint_host', $dlg->GetValue . ":".$dlg->GetPort)
-// 						if $dlg->ShowModal == wxID_OK;
-// 				}
-// 				else {
-// 					auto msg_window = new wxMessageDialog(parent, "No Bonjour device found", "Device Browser", wxOK | wxICON_INFORMATION);
-// 					msg_window->ShowModal();
-// 				}
 			});
 
 			return sizer;
@@ -1095,9 +1078,7 @@ void TabPrinter::build()
 					show_info(this, _(L("Connection to OctoPrint works correctly.")), _(L("Success!")));
 				} else {
 					const auto text = wxString::Format("%s: %s\n\n%s",
-						_(L("Could not connect to OctoPrint")),
-						msg,
-						_(L("Note: OctoPrint version at least 1.1.0 is required."))
+						_(L("Could not connect to OctoPrint")), msg, _(L("Note: OctoPrint version at least 1.1.0 is required."))
 					);
 					show_error(this, text);
 				}
