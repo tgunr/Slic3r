@@ -53,15 +53,11 @@ endif()
 add_subdirectory(xs)
 
 if (MSVC)
-	# Note: For some reason these settings need to be in the top-level CMakeLists.txt
-
 	# By default the startup project in MSVC is the 'ALL_BUILD' cmake-created project,
 	# but we want 'slic3r' as the startup one because debugging run command is associated with it.
 	# (Unfortunatelly it cannot be associated with ALL_BUILD using CMake.)
+	# Note: For some reason this needs to be set in the top-level CMakeLists.txt
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT XS)
-
-	# Supress the ZERO_CHECK target, it messes the build up
-	set(CMAKE_SUPPRESS_REGENERATION ON)
 endif ()
 
 enable_testing ()
