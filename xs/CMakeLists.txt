@@ -635,6 +635,15 @@ if (MSVC)
     set_target_properties(slic3r PROPERTIES VS_USER_PROPS "slic3r.wperl64d.props")
 endif ()
 
+# l10n
+set(L10N_DIR "${PROJECT_SOURCE_DIR}/resources/localization")
+add_custom_target(pot
+    COMMAND xgettext --keyword=L --from-code=UTF-8 --debug
+        -f "${L10N_DIR}/list.txt"
+        -o "${L10N_DIR}/Slic3rPE.pot"
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Generate pot file from strings in the source tree."
+)
 
 # Installation
 install(TARGETS XS DESTINATION ${PERL_VENDORARCH}/auto/Slic3r/XS)
