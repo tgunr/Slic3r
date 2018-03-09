@@ -80,10 +80,8 @@ void add_debug_menu(wxMenuBar *menu, int event_language_change);
 void open_preferences_dialog(int event_preferences);
 
 // Create a new preset tab (print, filament and printer),
-void create_preset_tabs(PresetBundle *preset_bundle, 
-						bool no_controller, bool is_disabled_button_browse,	bool is_user_agent,
-						int event_value_change, int event_presets_changed,
-						int event_button_browse, int event_button_test);
+void create_preset_tabs(PresetBundle *preset_bundle, bool no_controller,
+						int event_value_change, int event_presets_changed);
 TabIface* get_preset_tab_iface(char *name);
 
 // add it at the end of the tab panel.

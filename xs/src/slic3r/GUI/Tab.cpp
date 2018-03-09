@@ -1051,9 +1051,6 @@ void TabPrinter::build()
 			auto sizer = new wxBoxSizer(wxHORIZONTAL);
 			sizer->Add(btn);
 
-			if (m_is_disabled_button_browse) 
-				btn->Disable();
-
 			btn->Bind(wxEVT_BUTTON, [this, parent, optgroup](wxCommandEvent e) {
 				BonjourDialog dialog(parent);
 				if (dialog.show_and_lookup()) {
@@ -1285,13 +1282,8 @@ void TabPrinter::update(){
 			m_serial_test_btn->Disable();
 	}
 
-	en = !m_config->opt_string("octoprint_host").empty();
-	if ( en && m_is_user_agent)
-		m_octoprint_host_test_btn->Enable();
-	else 
-		m_octoprint_host_test_btn->Disable(); 
-	get_field("octoprint_apikey")->toggle(en);
-
+	m_octoprint_host_test_btn->Enable(!m_config->opt_string("octoprint_host").empty());
+	
 	bool have_multiple_extruders = m_extruders_count > 1;
 	get_field("toolchange_gcode")->toggle(have_multiple_extruders);
 	get_field("single_extruder_multi_material")->toggle(have_multiple_extruders);

@@ -90,8 +90,7 @@ BonjourDialog::~BonjourDialog()
 
 bool BonjourDialog::show_and_lookup()
 {
-	Show();
-	auto this_id = GetId();
+	Show();   // Because we need GetId() to work before ShowModal()
 
 	timer->Stop();
 	timer->SetOwner(this);
@@ -120,7 +119,6 @@ bool BonjourDialog::show_and_lookup()
 			std::lock_guard<std::mutex> lock_guard(dguard->mutex);
 			auto dialog = dguard->dialog;
 			if (dialog != nullptr) {
-				// auto evt = new BonjourReplyEvent(EVT_BONJOUR_REPLY, dialog->GetId(), std::move(reply));
 				auto evt = new wxCommandEvent(EVT_BONJOUR_COMPLETE, dialog->GetId());
 				wxQueueEvent(dialog, evt);
 			}

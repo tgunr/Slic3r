@@ -346,14 +346,12 @@ void open_preferences_dialog(int event_preferences)
 	dlg->ShowModal();
 }
 
-void create_preset_tabs(PresetBundle *preset_bundle,
-						bool no_controller, bool is_disabled_button_browse, bool is_user_agent,
-						int event_value_change, int event_presets_changed,
-						int event_button_browse, int event_button_test)
+void create_preset_tabs(PresetBundle *preset_bundle, bool no_controller,
+						int event_value_change, int event_presets_changed)
 {	
 	add_created_tab(new TabPrint	(g_wxTabPanel, no_controller), preset_bundle);
 	add_created_tab(new TabFilament	(g_wxTabPanel, no_controller), preset_bundle);
-	add_created_tab(new TabPrinter	(g_wxTabPanel, no_controller, is_disabled_button_browse, is_user_agent), 
+	add_created_tab(new TabPrinter	(g_wxTabPanel, no_controller), 
 					preset_bundle);
 	for (size_t i = 0; i < g_wxTabPanel->GetPageCount(); ++ i) {
 		Tab *tab = dynamic_cast<Tab*>(g_wxTabPanel->GetPage(i));
@@ -361,11 +359,6 @@ void create_preset_tabs(PresetBundle *preset_bundle,
 			continue;
 		tab->set_event_value_change(wxEventType(event_value_change));
 		tab->set_event_presets_changed(wxEventType(event_presets_changed));
-		if (tab->name() == "printer"){
-			TabPrinter* tab_printer = static_cast<TabPrinter*>(tab);
-			tab_printer->set_event_button_browse(wxEventType(event_button_browse));
-			tab_printer->set_event_button_test(wxEventType(event_button_test));
-		}
 	}
 }
 
