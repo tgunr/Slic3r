@@ -55,12 +55,16 @@ LayerPtrs new_layers(
     out.reserve(object_layers.size());
     auto     id   = int(print_object->slicing_parameters().raft_layers());
     double zmin = print_object->slicing_parameters().object_print_z_min;
+    // World Z of the object's mesh bottom. Zero for an object on the bed, nonzero for an
+    // object stacked on another one. Slicing planes must follow the mesh, while the
+    // printed Z (top_z + zmin) additionally accounts for a raft.
+    const double mesh_min_z = print_object->slicing_parameters().object_min_z;
     Layer   *prev = nullptr;
 
     for (const Domain::LayerZRange& layer_z_range : object_layers) {
         const double top_z   = layer_z_range.top_z;
         const double slice_z = layer_z_range.middle_z();
-        Layer* layer = new Layer(id++, print_object, layer_z_range.height(), top_z + zmin, slice_z);
+        Layer* layer = new Layer(id++, print_object, layer_z_range.height(), top_z + zmin, slice_z + mesh_min_z);
         out.emplace_back(layer);
         if (prev != nullptr) {
             prev->upper_layer = layer;

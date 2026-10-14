@@ -32,6 +32,7 @@ struct SlicingParameters
 
     static SlicingParameters create_from_config(
         const PrintObjectConfigView& config,
+        double object_min_z,
         double object_height,
         const std::vector<unsigned int>& object_extruders,
         const Domain::Vec3d& object_shrinkage_compensation
@@ -40,6 +41,7 @@ struct SlicingParameters
     static SlicingParameters create_from_config(
         const Domain::ConfigPackFDM& config,
         const Domain::ObjectSettings& object_settings,
+        double object_min_z,
         double object_height,
         const std::vector<unsigned int>& object_extruders,
         const Domain::Preset::HwPrinterConfig& hw_config
@@ -114,6 +116,12 @@ struct SlicingParameters
     // This value of maximum print Z is scaled by shrinkage compensation in the Z-axis.
     double 	object_print_z_max { 0 };
 
+    // World Z of the bottom of the object's mesh (the Z translation of its instance).
+    // Zero for an object resting on the bed. Objects stacked on top of each other (see
+    // "Paste on top") have a nonzero value; it is used to place the slicing planes on the
+    // object's actual geometry rather than on the bed.
+    double 	object_min_z { 0 };
+
     // This value of maximum print Z isn't scaled by shrinkage compensation.
     double 	object_print_z_uncompensated_max { 0 };
     // Scaling factor for compensating shrinkage in Z-axis.
@@ -143,6 +151,7 @@ inline bool equal_layering(const SlicingParameters &sp1, const SlicingParameters
             sp1.raft_base_top_z                     == sp2.raft_base_top_z                      &&
             sp1.raft_interface_top_z                == sp2.raft_interface_top_z                 &&
             sp1.raft_contact_top_z                  == sp2.raft_contact_top_z                   &&
+            sp1.object_min_z                        == sp2.object_min_z                         &&
             sp1.object_print_z_min                  == sp2.object_print_z_min;
 }
 

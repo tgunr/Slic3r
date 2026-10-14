@@ -51,6 +51,7 @@ max_layer_height_from_nozzle(const PrintObjectConfigView& print_config, int idx_
 
 SlicingParameters SlicingParameters::create_from_config(
 	const PrintObjectConfigView     &config,
+	double				         object_min_z,
 	double				         object_height,
     const std::vector<unsigned int> &object_extruders,
     const Vec3d                     &object_shrinkage_compensation)
@@ -75,9 +76,10 @@ SlicingParameters SlicingParameters::create_from_config(
     params.layer_height = config.get<double>("layer_height");
     params.first_print_layer_height = first_layer_height;
     params.first_object_layer_height = first_layer_height;
-    params.object_print_z_min = 0.;
-    params.object_print_z_max = object_height * object_shrinkage_compensation.z();
+    params.object_print_z_min = object_min_z;
+    params.object_print_z_max = object_min_z + (object_height - object_min_z) * object_shrinkage_compensation.z();
     params.object_print_z_uncompensated_max = object_height;
+    params.object_min_z = object_min_z;
     params.object_shrinkage_compensation_z = object_shrinkage_compensation.z();
     params.base_raft_layers = config.get<int>("raft_layers");
     params.soluble_interface = soluble_interface;
@@ -148,7 +150,7 @@ SlicingParameters SlicingParameters::create_from_config(
 			params.raft_contact_top_z    = params.raft_interface_top_z + params.contact_raft_layer_height;
 		}
         double print_z = params.raft_contact_top_z + params.gap_raft_object;
-        params.object_print_z_min  = print_z;
+        params.object_print_z_min  += print_z;
         params.object_print_z_max += print_z;
         params.object_print_z_uncompensated_max += print_z;
     }
@@ -160,6 +162,7 @@ SlicingParameters SlicingParameters::create_from_config(
 SlicingParameters SlicingParameters::create_from_config(
     const Domain::ConfigPackFDM& config,
     const Domain::ObjectSettings& object_settings,
+    double object_min_z,
     double object_height,
     const std::vector<unsigned int>& object_extruders,
     const Domain::Preset::HwPrinterConfig& hw_config
@@ -183,7 +186,7 @@ SlicingParameters SlicingParameters::create_from_config(
         full_config_fdm.value(),
         partial_object_config_fdm.value()
     };
-    return create_from_config(config_view, object_height, object_extruders, shrinkage);
+    return create_from_config(config_view, object_min_z, object_height, object_extruders, shrinkage);
 }
 
 ZHeightPairs layer_height_profile_from_ranges(

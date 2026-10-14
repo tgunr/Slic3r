@@ -96,6 +96,7 @@ LayerHeightParams compute_layer_height_params(
     const SlicingParameters slicing_parameters = SlicingParameters::create_from_config(
         fdm_config,
         model_object.object_settings,
+        model_object.min_z(),
         model_object.max_z(),
         extruder_candidates,
         config_container.selected_preset().hw_config

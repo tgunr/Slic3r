@@ -37,7 +37,6 @@ using Slic3r::Domain::Project;
 using Slic3r::Domain::SelectionId;
 using Slic3r::Domain::VolumeSettings;
 using Slic3r::Domain::Workbench;
-using Slic3r::Domain::ZHeightPairs;
 
 namespace {
 // Tolerance used when matching a Z height against the boundary of a height range.
@@ -73,13 +72,6 @@ void shift_ranges_by(LayerConfigRanges& ranges, double dz)
         );
     }
     ranges = std::move(shifted);
-}
-
-void shift_profile_by(ZHeightPairs& profile, double dz)
-{
-    for (auto& pair : profile) {
-        pair.z += dz;
-    }
 }
 } // namespace
 
@@ -432,21 +424,13 @@ void ClipboardInteractor::paste_objects_on_top(
     m_scene_interactor.set_element_transforms(transforms);
 
     if (std::abs(dz) > STACK_INTERFACE_EPSILON) {
+        // Height ranges are matched against the world Z of the slicing planes, so move the
+        // clone's ranges onto its new (world) position so its own interface range keeps
+        // applying. The layer height profile is stored in the object's own (0-based) Z and
+        // is inherited unchanged, so it is intentionally not shifted.
         m_scene_interactor.modify_layer_config_ranges(
             ElementRef{clone->id().id},
             [dz](ModelObject& object) { shift_ranges_by(object.layer_config_ranges, dz); }
-        );
-        m_scene_interactor.modify_layer_height_profile(
-            ElementRef{clone->id().id},
-            [dz](ModelObject& object)
-            {
-                ZHeightPairs profile = object.layer_height_profile.get();
-                if (profile.empty()) {
-                    return;
-                }
-                shift_profile_by(profile, dz);
-                object.layer_height_profile.set(std::move(profile));
-            }
         );
     }
 
