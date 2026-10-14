@@ -98,6 +98,20 @@ else()
     target_link_libraries(slic3r-render PUBLIC PNG::PNG)
     find_package(JPEG REQUIRED)
     target_link_libraries(slic3r-render PUBLIC JPEG::JPEG)
+    # Bundled libpng uses PNG_PREFIX (prusaslicer_*) while XQuartz/X11 ships
+    # unprefixed png.h; OpenGL::GL pulls /usr/X11R6/include first via -isystem,
+    # shadowing the bundled headers and breaking the link. Force ours first.
+    # (Plain -I precedes -isystem; BEFORE precedes everything.)
+    foreach(_slic3r_render_png_tgt PNG::png_static PNG::png_shared PNG::png_framework)
+        if (TARGET ${_slic3r_render_png_tgt})
+            get_target_property(_slic3r_render_png_incs ${_slic3r_render_png_tgt} INTERFACE_INCLUDE_DIRECTORIES)
+            if (_slic3r_render_png_incs AND NOT _slic3r_render_png_incs MATCHES "NOTFOUND")
+                target_include_directories(slic3r-render BEFORE PRIVATE ${_slic3r_render_png_incs})
+            endif ()
+        endif ()
+    endforeach()
+    unset(_slic3r_render_png_tgt)
+    unset(_slic3r_render_png_incs)
 endif ()
 target_include_directories(slic3r-render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

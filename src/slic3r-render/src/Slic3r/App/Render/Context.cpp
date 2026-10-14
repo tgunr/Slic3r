@@ -73,14 +73,14 @@ Semver parse_version(const std::string& s)
 
 Context::Context()
 {
-    m_gl_vendor_string = getGlString(GL_VENDOR);
+    m_gl_vendor_string = getGlString(GL_VENDOR, VERSION_NA);
     m_gl_version_string = getGlString(GL_VERSION, VERSION_NA);
     m_opengl_version = parse_version(m_gl_version_string);
     m_core_profile = !GLEW_ARB_compatibility;
     m_gl_core_profile_string = m_core_profile ? "Yes" : "No";
     m_glsl_version_string = getGlString(GL_SHADING_LANGUAGE_VERSION, VERSION_NA);
     m_glsl_version = parse_version(m_glsl_version_string);
-    m_gl_renderer_string = getGlString(GL_RENDERER);
+    m_gl_renderer_string = getGlString(GL_RENDERER, VERSION_NA);
 
     GLint max_texture_units = 0;
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
