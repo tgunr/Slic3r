@@ -95,6 +95,7 @@ enum class UndoSnapshotType
     SelectPrinterPreset,
     SetPartSettingsValue,
     PasteObjects,
+    PasteObjectsOnTop,
     PasteVolumes,
     VariableLayerHeightStroke,
     VariableLayerHeightSmooth,

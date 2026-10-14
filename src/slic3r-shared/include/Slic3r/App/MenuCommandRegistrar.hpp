@@ -69,6 +69,12 @@ private:
     void register_object_menu_commands();
     void register_object_menu_add_volume_commands();
 
+    /**
+     * @brief Pastes the copied object on top of its source, optionally asking for the
+     * interface extruder first.
+     */
+    void paste_object_on_top();
+
     void register_svg_or_text_volume_menu_commands();
     void register_volume_menu_commands();
     void register_multi_object_menu_commands();

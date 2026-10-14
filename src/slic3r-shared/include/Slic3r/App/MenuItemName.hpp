@@ -98,6 +98,8 @@ enum class MenuItemName
     ObjectContextMenu,
     CopyObject,
     PasteObject,
+    PasteObjectOnTop,
+    PasteOnTop,
     DeleteSelectedObject,
     SetNumberOfInstances,
     FillBedWithInstances,

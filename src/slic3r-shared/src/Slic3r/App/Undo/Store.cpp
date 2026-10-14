@@ -239,6 +239,8 @@ static std::string to_string(Biz::UndoSnapshotType type)
         return _u8L("Change volume type");
     case Type::PasteObjects:
         return _u8L("Paste objects");
+    case Type::PasteObjectsOnTop:
+        return _u8L("Paste objects on top");
     case Type::PasteVolumes:
         return _u8L("Paste volumes");
     case Type::VariableLayerHeightStroke:

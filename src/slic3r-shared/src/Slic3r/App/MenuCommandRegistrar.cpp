@@ -37,6 +37,7 @@
 #include "Slic3r/App/Plater/PlaterRenderModule.hpp"
 #include "Slic3r/App/Plater/TextGizmo.hpp"
 
+#include <algorithm>
 #include <optional>
 
 namespace Slic3r::App {
@@ -426,6 +427,45 @@ void MenuCommandRegistrar::register_bed_menu_add_shape_commands()
         );
 }
 
+void MenuCommandRegistrar::paste_object_on_top()
+{
+    const Domain::SelectionId project_id = m_project_interactor.selected_project_id();
+
+    const auto paste_on_top = [this, project_id](std::optional<int> interface_extruder)
+    {
+        m_clipboard_interactor.paste_on_top(project_id, interface_extruder);
+    };
+
+    const int extruder_count = m_clipboard_interactor.target_interface_extruder_count(project_id);
+    // Prompt for the interface extruder on the first paste of a stack; later pastes of
+    // the same clipboard reuse the choice made for the first one.
+    if (extruder_count > 1 && !m_clipboard_interactor.is_stack_active()) {
+        const int default_extruder = std::clamp(
+            m_clipboard_interactor.source_top_interface_extruder().value_or(1),
+            1,
+            extruder_count
+        );
+
+        m_render_module.get_user_number_and_process(
+            Biz::_u8L(
+                "The top layer of the lower object becomes the interface layer. Model an extra top "
+                "layer if the finished part must keep its designed height."
+            ),
+            Biz::_u8L("Interface extruder number (0 for no interface layer):"),
+            Biz::_u8L("Paste on top"),
+            default_extruder,
+            0,
+            extruder_count,
+            [paste_on_top](int extruder)
+            {
+                paste_on_top(extruder > 0 ? std::optional<int>{extruder} : std::nullopt);
+            }
+        );
+    } else {
+        paste_on_top(std::nullopt);
+    }
+}
+
 void MenuCommandRegistrar::register_object_menu_commands()
 {
     CommandBuilder builder(m_menu_manager, m_render_module);
@@ -453,6 +493,18 @@ void MenuCommandRegistrar::register_object_menu_commands()
                     Platform::KeyCode::V
                 }},
                 .enabled            = [this]() { return m_clipboard_interactor.can_paste(); }
+            }
+        )
+        .append_item(
+            MenuItemName::PasteObjectOnTop,
+            CommandName::PasteModelItemsOnTop,
+            [this]() { paste_object_on_top(); },
+            UIItemCommandExtraOpts{
+                .keyboard_shortcuts = Platform::KeyboardShortcuts{Platform::KeyboardShortcut{
+                    Platform::KeyModifiers(Platform::KeyModifier::Ctrl) | Platform::KeyModifiers(Platform::KeyModifier::Shift),
+                    Platform::KeyCode::V
+                }},
+                .enabled            = [this]() { return m_clipboard_interactor.can_paste_on_top(); }
             }
         )
         .append_item_from_command(MenuItemName::DeleteSelectedObject, CommandName::DeleteSelected)
@@ -1621,6 +1673,21 @@ void MenuCommandRegistrar::register_main_menu_edit_commands()
                         Platform::KeyCode::V
                     }},
                     .enabled            = [this]() { return m_clipboard_interactor.can_paste(); }
+                }
+            )
+        )
+        // Menu -> Edit -> Paste on top
+        .register_menu_item(
+            {MenuItemName::MainMenu, MenuItemName::Edit, MenuItemName::PasteOnTop},
+            std::make_unique<UIItemCommand>(
+                CommandName::PasteOnTop,
+                [this]() { paste_object_on_top(); },
+                UIItemCommandExtraOpts{
+                    .keyboard_shortcuts = Platform::KeyboardShortcuts{Platform::KeyboardShortcut{
+                        Platform::KeyModifiers(Platform::KeyModifier::Ctrl) | Platform::KeyModifiers(Platform::KeyModifier::Shift),
+                        Platform::KeyCode::V
+                    }},
+                    .enabled            = [this]() { return m_clipboard_interactor.can_paste_on_top(); }
                 }
             )
         )

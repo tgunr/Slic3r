@@ -47,6 +47,9 @@ std::string MenuBuilder::item_name_translated(UniversalMenuItemName menu_item_na
                 case MenuItemName::PasteObject:
                 case MenuItemName::PasteVolume:
                     return Biz::_u8L("Paste");
+                case MenuItemName::PasteObjectOnTop:
+                case MenuItemName::PasteOnTop:
+                    return Biz::_u8L("Paste on top");
                 case MenuItemName::ReloadFromDisk:
                 case MenuItemName::ReloadObject:
                 case MenuItemName::ReloadVolume:

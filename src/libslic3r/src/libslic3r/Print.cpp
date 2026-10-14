@@ -1905,6 +1905,14 @@ void Print::alert_when_supports_needed()
                 continue;
             }
 
+            // An object lifted off the bed is stacked on top of another object (see
+            // "Paste on top"). It is supported by the object below, so the bed-relative
+            // support spot analysis does not apply and would produce false alarms
+            // ("Floating object part", "Floating bridge anchors", "Loose extrusions").
+            if (object->model_object()->min_z() > 1e-3) {
+                continue;
+            }
+
             SupportSpotsGenerator::SupportPoints  supp_points = object->m_shared_regions->generated_support_points->support_points;
             SupportSpotsGenerator::PartialObjects partial_objects = object->m_shared_regions->generated_support_points
                                                                         ->partial_objects;
